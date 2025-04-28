@@ -1,6 +1,9 @@
 package xploader
 
 var (
+	// DefaultChar is the initial character of blank cells in REXPaint.
+	DefaultChar = ' '
+
 	// DefaultForegroundColor is the initial foreground color of blank cells in REXPaint.
 	DefaultForegroundColor = Color{R: 0, G: 0, B: 0}
 
@@ -30,7 +33,7 @@ type Cell struct {
 
 // IsEmpty will return true when the artist did not paint this cell in REXPaint but left it untouched.
 func (c Cell) IsEmpty() bool {
-	return c.Rune == ' ' &&
+	return c.Rune == DefaultChar &&
 		c.Fg == DefaultForegroundColor &&
 		c.Bg.IsInvisible()
 }
@@ -38,7 +41,7 @@ func (c Cell) IsEmpty() bool {
 // NewEmptyCell returns a cell as REXPaint initialises it by default without the artist having touched it.
 func NewEmptyCell() Cell {
 	return Cell{
-		Rune: ' ',
+		Rune: DefaultChar,
 		Fg:   DefaultForegroundColor,
 		Bg:   InvisibleColor,
 	}

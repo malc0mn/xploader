@@ -4,6 +4,13 @@ import (
 	"testing"
 )
 
+func TestDefaultChar(t *testing.T) {
+	space := ' '
+	if DefaultChar != space {
+		t.Fatalf("DefaultForegroundColor is incorrect, got %#v", DefaultChar)
+	}
+}
+
 func TestDefaultForegroundColor(t *testing.T) {
 	black := Color{R: 0, G: 0, B: 0}
 	if DefaultForegroundColor != black {
