@@ -97,3 +97,38 @@ func TestNewEmptyLayer(t *testing.T) {
 		}
 	}
 }
+
+func TestGetCellColumnMajor(t *testing.T) {
+	layer := &Layer{
+		ColumnMajor: true,
+		Width:       2,
+		Height:      2,
+		Cells: [][]Cell{
+			{
+				{Rune: 'A'}, // column 0, row 0
+				{Rune: 'B'}, // column 0, row 1
+			},
+			{
+				{Rune: 'C'}, // column 1, row 0
+				{Rune: 'D'}, // column 1, row 1
+			},
+		},
+	}
+
+	tests := []struct {
+		x, y   int
+		expect rune
+	}{
+		{x: 0, y: 0, expect: 'A'},
+		{x: 0, y: 1, expect: 'B'},
+		{x: 1, y: 0, expect: 'C'},
+		{x: 1, y: 1, expect: 'D'},
+	}
+
+	for _, tt := range tests {
+		cell := layer.GetCell(tt.x, tt.y)
+		if cell.Rune != tt.expect {
+			t.Errorf("GetCell(%d,%d): got %q, want %q", tt.x, tt.y, cell.Rune, tt.expect)
+		}
+	}
+}

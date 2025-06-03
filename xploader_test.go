@@ -126,7 +126,6 @@ func TestLoadSimpleFiles(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt // MUST copy here to prevent awkward results due to reuse
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -220,10 +219,10 @@ func TestLoadMissingFile(t *testing.T) {
 }
 
 func TestSaveXPFile(t *testing.T) {
-	sourceFile := filepath.Join(testDataDir, "simple.xp")
+	path := filepath.Join(testDataDir, "simple.xp")
 
 	// Load original XP file.
-	xpOriginal, err := LoadXPFile(sourceFile)
+	xpOriginal, err := LoadXPFile(path)
 	if err != nil {
 		t.Fatalf("Failed to load original XP file: %v", err)
 	}
@@ -262,7 +261,7 @@ func TestMarshal(t *testing.T) {
 	}
 
 	// Marshal the XPFile struct.
-	marshaledData, err := Marshal(xp)
+	marshaledData, err := Marshal(xp, SaveOptions{})
 	if err != nil {
 		t.Fatalf("Failed to marshal XP file: %v", err)
 	}
@@ -288,5 +287,76 @@ func TestMarshal(t *testing.T) {
 
 		// Should be unreachable.
 		t.Fatal("Marshaled data differs, but no exact difference found")
+	}
+}
+
+func TestLoadColumnMajorOption(t *testing.T) {
+	path := filepath.Join(testDataDir, "simple.xp")
+	opts := LoadOptions{
+		ColumnMajor: true,
+	}
+
+	xp, err := LoadXPFileWithOptions(path, opts)
+	if err != nil {
+		t.Fatalf("Failed to load XP file with ColumnMajor=true: %v", err)
+	}
+
+	if len(xp.Layers) == 0 {
+		t.Fatal("Expected at least one layer")
+	}
+
+	layer := xp.Layers[0]
+	if !layer.ColumnMajor {
+		t.Error("Expected layer.ColumnMajor to be true")
+	}
+
+	// Sanity check: ensure GetCell still works logically
+	cell := layer.GetCell(0, 0)
+	if cell.IsEmpty() {
+		t.Error("Expected top-left cell to be non-empty")
+	}
+}
+
+func TestAllCharsXPMapping(t *testing.T) {
+	path := filepath.Join(testDataDir, "allchars.xp")
+
+	xp, err := LoadXPFile(path)
+	if err != nil {
+		t.Fatalf("Failed to load allchars.xp: %v", err)
+	}
+
+	layer := xp.Layers[0]
+	startX, startY := 1, 1
+	gridSize := 16
+
+	if int(layer.Width) < startX+gridSize || int(layer.Height) < startY+gridSize {
+		t.Fatalf("Layer too small for %dx%d grid at offset (%d,%d)", gridSize, gridSize, startX, startY)
+	}
+
+	for row := 0; row < gridSize; row++ {
+		for col := 0; col < gridSize; col++ {
+			x := startX + col
+			y := startY + row
+			expectedCode := int32(row*gridSize + col)
+
+			cell := layer.GetCell(x, y)
+
+			encoded := CP437Encoder(cell.Rune)
+			if expectedCode == 0 && encoded == 32 && cell.Rune == ' ' {
+				t.Logf("Note: CP437 code 0 rendered and re-encoded as space at (%d,%d), by design", x, y)
+			} else if encoded != expectedCode {
+				t.Errorf("Wrong code at (%d,%d): got %d (from %q), want %d", x, y, encoded, cell.Rune, expectedCode)
+			}
+
+			decoded := CP437Decoder(expectedCode)
+			if cell.Rune != decoded {
+				// Accept visible space as valid rendering for code 0
+				if expectedCode == 0 && cell.Rune == ' ' {
+					t.Logf("Note: CP437 code 0 decoded to space at (%d,%d), by design", x, y)
+					continue
+				}
+				t.Errorf("Incorrect decoding at (%d,%d): got %q, want %q", x, y, cell.Rune, decoded)
+			}
+		}
 	}
 }

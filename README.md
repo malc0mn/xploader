@@ -13,6 +13,10 @@ terminal-based or graphical projects.
     memory layout.
   - Regardless of storage layout, `Layer.GetCell(x, y)` always retrieves the
     expected cell at logical `(x,y)` coordinates.
+- CP437-to-Unicode mapping support with full 256-glyph coverage.
+  - Handles REXPaint's special font overrides (e.g., code 254/255 as "radio boxes").
+  - Custom decoder/encoder functions supported via `LoadOptions` and `SaveOptions`.
+- Properly handles both row-major and column-major layer layouts.
 
 Saving is supported:
 - `XPFile` structs can be saved back to disk.
@@ -111,3 +115,31 @@ func waitForKeypress(screen tcell.Screen) {
 	}
 }
 ```
+
+## Custom Decoding/Encoding
+REXPaint uses Code Page 437 (CP437) character codes internally when using the
+default font. By default, `xploader` maps these to Unicode using a built-in
+`CP437ToUnicode` table.
+
+If you're using a custom font or want to override this behavior, you can supply
+your own decoder or encoder:
+```go
+opts := xploader.LoadOptions{
+    RuneDecoder: func(code int32) rune {
+        return myCustomRuneMap[code]
+    },
+}
+xp, _ := xploader.LoadXPFileWithOptions("file.xp", opts)
+```
+
+Likewise, when saving:
+```go
+saveOpts := xploader.SaveOptions{
+    RuneEncoder: func(r rune) int32 {
+        return myUnicodeToCP437[r]
+    },
+}
+_ = xploader.SaveXPFileWithOptions(xp, "output.xp", saveOpts)
+```
+
+See [cp437.go](cp437.go) for the built-in mapping.
